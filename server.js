@@ -1,18 +1,17 @@
 require('dotenv').config();
 
-const fs = require('fs');
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger-output.json');
 
+const authMiddleware = require('./middlewares/auth');
+const authRouter = require('./routes/auth');
 const questionsRouter = require('./routes/questions');
 const uploadRouter = require('./routes/upload');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const uploadsDir = path.join(__dirname, 'uploads', 'provas');
-fs.mkdirSync(uploadsDir, { recursive: true });
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
@@ -22,8 +21,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Arquivos estáticos (PDFs)
-app.use('/files', express.static(path.join(__dirname, 'uploads')));
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.get('/docs-json', (req, res) => {
+  res.json(swaggerDocument);
+});
+
+app.use(authMiddleware);
+
+app.use(authRouter);
 
 app.get('/health', (req, res) => {
   res.json({ ok: true, message: 'API online' });

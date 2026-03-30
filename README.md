@@ -9,11 +9,12 @@ API simples para revisão humana de questões extraídas de provas em PDF.
 - PostgreSQL
 - `pg`
 - `multer`
+- `minio`
 
 ## Requisitos
 
 - Node.js 18+
-- PostgreSQL com tabela `questions` já criada
+- PostgreSQL com tabelas `questions` e `users` já criadas
 
 ## Configuração
 
@@ -34,6 +35,62 @@ cp .env.example .env
 ```env
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/validador_questoes
 PORT=3000
+MINIO_ENDPOINT=https://minio.andersonlbsoares.com.br
+MINIO_PUBLIC_BASE_URL=https://minio.andersonlbsoares.com.br
+MINIO_BUCKET=enem-questoes
+MINIO_ACCESS_KEY=SEU_ACCESS_KEY
+MINIO_SECRET_KEY=SEU_SECRET_KEY
+JWT_SECRET=SUA_CHAVE_JWT_FORTE_AQUI
+JWT_EXPIRES_IN=12h
+```
+
+## Autenticação
+
+Todas as rotas exigem token JWT, exceto `POST /login`.
+
+### Login
+
+`POST /login`
+
+Body:
+
+```json
+{
+  "username": "admin",
+  "password": "senha"
+}
+```
+
+Resposta:
+
+```json
+{
+  "ok": true,
+  "token": "<jwt>",
+  "user": {
+    "id": 1,
+    "username": "admin"
+  }
+}
+```
+
+### Criar usuário
+
+`POST /users`
+
+Body:
+
+```json
+{
+  "username": "novo_usuario",
+  "password": "senha_forte"
+}
+```
+
+Header obrigatório (todas as rotas protegidas):
+
+```http
+Authorization: Bearer <jwt>
 ```
 
 ## Rodando a API
@@ -50,28 +107,35 @@ Produção/local simples:
 npm start
 ```
 
-Health check:
+## Documentação interativa (Swagger)
+
+A API expõe documentação Swagger em:
+
+- `GET /docs` (interface web)
+- `GET /docs-json` (OpenAPI JSON)
+
+Ela é gerada automaticamente a partir das rotas quando você roda:
+
+- `npm run dev`
+- `npm start`
+
+Você também pode regenerar manualmente:
 
 ```bash
-curl http://localhost:3000/health
+npm run swagger:generate
 ```
 
-## Servindo PDFs localmente
+Health check (rota protegida):
 
-Os PDFs ficam em `uploads/provas/`.
-
-A API expõe essa pasta em `/files`.
-
-Exemplo:
-
-- arquivo local: `uploads/provas/2025.pdf`
-- URL pública: `http://localhost:3000/files/provas/2025.pdf`
-
-Exemplo de iframe no front:
-
-```html
-<iframe src="http://localhost:3000/files/provas/2025.pdf#page=4" width="100%" height="700"></iframe>
+```bash
+curl http://localhost:3000/health -H "Authorization: Bearer <jwt>"
 ```
+
+## Armazenamento de PDFs no MinIO
+
+Os PDFs enviados no endpoint de upload são armazenados no bucket configurado em `MINIO_BUCKET`.
+
+Com a configuração acima, os objetos ficam no bucket `enem-questoes` em `https://minio.andersonlbsoares.com.br`.
 
 ## Upload de PDF
 
@@ -95,8 +159,8 @@ Resposta de sucesso:
 ```json
 {
   "ok": true,
-  "filename": "2025.pdf",
-  "path": "/files/provas/2025.pdf"
+  "filename": "1711812456321_2025.pdf",
+  "path": "https://minio.andersonlbsoares.com.br/enem-questoes/1711812456321_2025.pdf"
 }
 ```
 
@@ -269,5 +333,5 @@ Erro:
 
 - CORS liberado para facilitar front local
 - logging simples com `console.log`
-- sem autenticação, sem ORM, sem Docker
+- sem ORM, sem Docker
 - SQL explícito via `pg`
