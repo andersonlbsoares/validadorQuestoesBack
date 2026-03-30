@@ -137,6 +137,10 @@ Os PDFs enviados no endpoint de upload são armazenados no bucket configurado em
 
 Com a configuração acima, os objetos ficam no bucket `enem-questoes` em `https://minio.andersonlbsoares.com.br`.
 
+Para manter compatibilidade com o front antigo, a API também expõe os PDFs em:
+
+- `GET /files/provas/:fileName`
+
 ## Upload de PDF
 
 Endpoint:

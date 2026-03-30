@@ -249,6 +249,7 @@ router.put('/questions/:id', async (req, res) => {
       'arquivo_origem',
       'pdf_path',
     ];
+    const jsonbFields = new Set(['alternativas', 'textos_apoio_adicionais', 'recursos_visuais']);
 
     const setParts = [];
     const params = [];
@@ -259,8 +260,17 @@ router.put('/questions/:id', async (req, res) => {
         if (field === 'resposta' && value) {
           value = String(value).toUpperCase();
         }
+
+        if (jsonbFields.has(field)) {
+          value = JSON.stringify(value);
+        }
+
         params.push(value);
-        setParts.push(`${field} = $${params.length}`);
+        if (jsonbFields.has(field)) {
+          setParts.push(`${field} = $${params.length}::jsonb`);
+        } else {
+          setParts.push(`${field} = $${params.length}`);
+        }
       }
     }
 

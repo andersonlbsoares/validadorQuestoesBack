@@ -81,18 +81,65 @@ router.post('/upload-pdf', (req, res) => {
         'Content-Type': 'application/pdf',
       });
 
-      const publicPath = `${minioPublicBaseUrl}/${minioBucket}/${objectName}`;
+      const minioUrl = `${minioPublicBaseUrl}/${minioBucket}/${objectName}`;
+      const publicPath = `/files/provas/${encodeURIComponent(objectName)}`;
 
       return res.json({
         ok: true,
         filename: objectName,
         path: publicPath,
+        minio_url: minioUrl,
       });
     } catch (uploadError) {
       console.error('Erro ao enviar PDF para o MinIO:', uploadError);
       return res.status(500).json({ ok: false, error: 'Erro ao enviar PDF para o MinIO' });
     }
   });
+});
+
+router.get('/files/:fileName', async (req, res) => {
+  try {
+    await ensureBucketReady();
+
+    const objectName = decodeURIComponent(req.params.fileName);
+    const stat = await minioClient.statObject(minioBucket, objectName);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${objectName}"`);
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    const rangeHeader = req.headers.range;
+    if (rangeHeader) {
+      const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+
+      if (match) {
+        const start = match[1] ? Number.parseInt(match[1], 10) : 0;
+        const end = match[2] ? Number.parseInt(match[2], 10) : stat.size - 1;
+
+        if (Number.isNaN(start) || Number.isNaN(end) || start > end || end >= stat.size) {
+          return res.status(416).end();
+        }
+
+        const chunkSize = end - start + 1;
+        const partialStream = await minioClient.getPartialObject(minioBucket, objectName, start, chunkSize);
+        res.status(206);
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+        res.setHeader('Content-Length', chunkSize);
+        return partialStream.pipe(res);
+      }
+    }
+
+    res.setHeader('Content-Length', stat.size);
+    const stream = await minioClient.getObject(minioBucket, objectName);
+    return stream.pipe(res);
+  } catch (err) {
+    if (err.code === 'NotFound' || err.code === 'NoSuchKey' || err.code === 'NoSuchObject') {
+      return res.status(404).json({ ok: false, error: 'Arquivo não encontrado' });
+    }
+
+    console.error('Erro ao buscar arquivo no MinIO:', err);
+    return res.status(500).json({ ok: false, error: 'Erro ao buscar arquivo' });
+  }
 });
 
 module.exports = router;

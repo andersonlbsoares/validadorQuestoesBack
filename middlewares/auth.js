@@ -15,6 +15,10 @@ function authMiddleware(req, res, next) {
     return next();
   }
 
+  if (req.path === '/files' || req.path.startsWith('/files/')) {
+    return next();
+  }
+
   const authHeader = (req.headers.authorization || '').trim();
   let token = '';
 
