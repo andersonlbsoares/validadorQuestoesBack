@@ -255,7 +255,6 @@ Campos editáveis:
 - `enunciado`
 - `alternativas` (objeto)
 - `resposta` (`A|B|C|D|E` ou `null`)
-- `observacoes`
 - `textos_apoio_adicionais` (array)
 - `recursos_visuais` (array)
 - `pagina_inicial`
@@ -282,8 +281,7 @@ curl -X PUT http://localhost:3000/questions/enem_2025_azul_q004 \
       "D": "Opcao D",
       "E": "Opcao E"
     },
-    "resposta": "E",
-    "observacoes": "Ajuste de acentuação"
+    "resposta": "E"
   }'
 ```
 

@@ -70,14 +70,13 @@ async function run() {
           textos_apoio_adicionais,
           status_extracao,
           status_revisao,
-          observacoes,
           arquivo_origem,
           pdf_path,
           updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9,
           $10::jsonb, $11, $12::jsonb, $13::jsonb,
-          $14, $15, $16, $17, $18, NOW()
+          $14, $15, $16, $17, NOW()
         )
         ON CONFLICT (id)
         DO UPDATE SET
@@ -95,7 +94,6 @@ async function run() {
           textos_apoio_adicionais = EXCLUDED.textos_apoio_adicionais,
           status_extracao = EXCLUDED.status_extracao,
           status_revisao = EXCLUDED.status_revisao,
-          observacoes = EXCLUDED.observacoes,
           arquivo_origem = EXCLUDED.arquivo_origem,
           pdf_path = EXCLUDED.pdf_path,
           updated_at = NOW()`,
@@ -115,7 +113,6 @@ async function run() {
           JSON.stringify(item.textos_apoio_adicionais ?? []),
           item.status_extracao ?? null,
           statusRevisao,
-          item.observacoes ?? '',
           item.arquivo_origem ?? null,
           item.pdf_path ?? null,
         ]

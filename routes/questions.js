@@ -241,7 +241,6 @@ router.put('/questions/:id', async (req, res) => {
       'enunciado',
       'alternativas',
       'resposta',
-      'observacoes',
       'textos_apoio_adicionais',
       'recursos_visuais',
       'pagina_inicial',
