@@ -168,6 +168,43 @@ Resposta de sucesso:
 }
 ```
 
+## Listar arquivos no MinIO
+
+Endpoint:
+
+- `GET /files`
+
+Query params opcionais:
+
+- `prefix` (filtra objetos pelo prefixo)
+- `limit` (número máximo de itens, padrão `1000`)
+
+Exemplo com curl:
+
+```bash
+curl "http://localhost:3000/files?prefix=&limit=50"
+```
+
+Resposta de sucesso:
+
+```json
+{
+  "ok": true,
+  "bucket": "enem-questoes",
+  "total": 1,
+  "data": [
+    {
+      "filename": "1711812456321_2025.pdf",
+      "size": 123456,
+      "last_modified": "2026-03-31T10:00:00.000Z",
+      "etag": "<etag>",
+      "minio_url": "https://minio.andersonlbsoares.com.br/enem-questoes/1711812456321_2025.pdf",
+      "path": "/files/1711812456321_2025.pdf"
+    }
+  ]
+}
+```
+
 ## Importação de questões via JSON
 
 Script:

@@ -48,6 +48,13 @@ function sanitizeFilename(name) {
   return `${base}.pdf`;
 }
 
+function parsePositiveInt(value) {
+  if (value === undefined) return undefined;
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
@@ -95,6 +102,53 @@ router.post('/upload-pdf', (req, res) => {
       return res.status(500).json({ ok: false, error: 'Erro ao enviar PDF para o MinIO' });
     }
   });
+});
+
+router.get('/files', async (req, res) => {
+  try {
+    await ensureBucketReady();
+
+    const prefix = req.query.prefix ? String(req.query.prefix) : '';
+    const limit = parsePositiveInt(req.query.limit);
+
+    if (limit === null) {
+      return res.status(400).json({ ok: false, error: 'limit inválido' });
+    }
+
+    const maxItems = limit || 1000;
+    const stream = minioClient.listObjectsV2(minioBucket, prefix, true);
+    const files = [];
+
+    await new Promise((resolve, reject) => {
+      stream.on('data', (obj) => {
+        if (files.length >= maxItems) {
+          return;
+        }
+
+        files.push({
+          filename: obj.name,
+          size: obj.size,
+          last_modified: obj.lastModified,
+          etag: obj.etag,
+          minio_url: `${minioPublicBaseUrl}/${minioBucket}/${encodeURIComponent(obj.name)}`,
+          path: `/files/${encodeURIComponent(obj.name)}`,
+        });
+      });
+
+      stream.on('error', reject);
+      stream.on('end', resolve);
+    });
+
+    return res.json({
+      ok: true,
+      bucket: minioBucket,
+      total: files.length,
+      data: files,
+    });
+  } catch (err) {
+    console.error('Erro ao listar arquivos no MinIO:', err);
+    return res.status(500).json({ ok: false, error: 'Erro ao listar arquivos no MinIO' });
+  }
 });
 
 router.get('/files/:fileName', async (req, res) => {
