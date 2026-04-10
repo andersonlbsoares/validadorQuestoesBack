@@ -266,6 +266,16 @@ curl "http://localhost:3000/questions?ano=2025&prova=enem&caderno=azul&status_re
 curl http://localhost:3000/questions/enem_2025_azul_q004
 ```
 
+### Listar cadernos disponíveis
+
+`GET /questions/cadernos`
+
+Retorna valores distintos de `caderno` existentes na base (sem nulos/vazios), ordenados em ordem alfabética.
+
+```bash
+curl http://localhost:3000/questions/cadernos
+```
+
 ### Próxima pendente por id atual
 
 `GET /questions/:id/next-pending`
@@ -291,7 +301,7 @@ Campos editáveis:
 - `texto_apoio`
 - `enunciado`
 - `alternativas` (objeto)
-- `resposta` (`A|B|C|D|E` ou `null`)
+- `resposta` (`A|B|C|D|E|ANULADA` ou `null`)
 - `textos_apoio_adicionais` (array)
 - `recursos_visuais` (array)
 - `pagina_inicial`
@@ -352,6 +362,110 @@ curl -X POST http://localhost:3000/questions/enem_2025_azul_q004/reopen
 
 ```bash
 curl http://localhost:3000/stats/review
+```
+
+### Fila de validação humana
+
+`GET /questions/review-queue`
+
+Query params opcionais:
+
+- `only_null` (`true|false`, padrão `true`) para retornar apenas questões com algum campo nulo definido em `null_fields`
+- `null_fields` (CSV, padrão `resposta`) com os campos nulos a considerar quando `only_null=true`
+  - permitidos: `resposta`, `alternativas`, `enunciado`, `texto_apoio`
+- `ano`
+- `arquivo_origem`
+- `macroarea`
+- `status_extracao`
+- `page` (padrão `1`)
+- `page_size` (padrão `25`, máximo `100`)
+
+Ordenação padrão (determinística):
+
+- `resposta IS NULL DESC`
+- `macroarea IS NULL DESC`
+- `ano ASC`
+- `arquivo_origem ASC`
+- `numero_questao ASC`
+- `id ASC`
+
+Exemplo:
+
+```bash
+curl "http://localhost:3000/questions/review-queue?only_null=true&null_fields=resposta,alternativas&page=1&page_size=20"
+```
+
+### Resumo da validação humana
+
+`GET /questions/review-summary`
+
+Retorna:
+
+- `total_questoes`
+- `total_null`
+- `total_preenchidas`
+- `null_por_ano`
+- `null_por_arquivo_origem`
+- `null_por_macroarea`
+
+Exemplo:
+
+```bash
+curl "http://localhost:3000/questions/review-summary"
+```
+
+### Fila de revisão de recursos visuais
+
+`GET /questions/resources-review-queue`
+
+Retorna apenas questões que possuem `recursos_visuais` como array não vazio.
+
+Query params opcionais:
+
+- `ano`
+- `prova`
+- `caderno`
+- `arquivo_origem`
+- `resource_count` (`1`, `2`, `3`, `+3`)
+- `page` (padrão `1`)
+- `page_size` (padrão `5`, máximo `100`)
+- `offset` (padrão calculado por `page`, mínimo `0`)
+
+Exemplo:
+
+```bash
+curl "http://localhost:3000/questions/resources-review-queue?page=1&page_size=20"
+```
+
+### Atualização manual da resposta
+
+`PATCH /questions/:id/answer`
+
+Body:
+
+```json
+{
+  "resposta": "A",
+  "review_note": "Conferido manualmente no gabarito oficial"
+}
+```
+
+Domínio permitido para `resposta`:
+
+- `A`, `B`, `C`, `D`, `E`, `ANULADA`, `null`
+
+`reviewed_by` é registrado a partir do usuário autenticado no JWT.
+
+Exemplo:
+
+```bash
+curl -X PATCH http://localhost:3000/questions/enem_2025_azul_q004/answer \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jwt>" \
+  -d '{
+    "resposta": "ANULADA",
+    "review_note": "Questão anulada no gabarito oficial"
+  }'
 ```
 
 ## Resposta padrão da API
